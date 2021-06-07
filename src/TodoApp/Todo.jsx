@@ -1,59 +1,110 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { InputGroup, FormControl, Alert } from "react-bootstrap";
 import { Button } from "@material-ui/core";
 import AddIcon from "@material-ui/icons/Add";
 import DeleteIcon from "@material-ui/icons/Delete";
+import EditIcon from "@material-ui/icons/Edit";
 import TodoLogo from "./images/todologo.svg";
 import "./todo.css";
+
+// to get Data from local Storage
+
+const GetStoreData = () => {
+  let list = localStorage.getItem("list");
+
+  if (list) {
+    return JSON.parse(localStorage.getItem("list"));
+  } else {
+    return [];
+  }
+};
+
 function Todo() {
   const [inputData, setInputData] = useState("");
-  const [items, setItems] = useState([]);
+  const [items, setItems] = useState(GetStoreData());
   const [message, setMessage] = useState(0);
+  const [toggleItem, setToggleItem] = useState(true);
+  const [isEditItem, setIsEditItem] = useState();
 
   //   Add items method
   const addItems = () => {
     if (!inputData) {
+    } else if (inputData && !toggleItem) {
+      setItems(
+        items.map((elem) => {
+          if (elem.id === isEditItem) {
+            return { ...elem, name: inputData };
+          }
+          return elem;
+        })
+      );
+      setToggleItem(true);
+      setInputData('');
+      setIsEditItem(null);
+      setMessage(3);
+      setTimeout(() => {
+        setMessage(0);
+      }, 2000);
     } else {
-      setItems([...items, inputData]);
+      const addAllData = {
+        id: new Date().getTime().toString(),
+        name: inputData,
+      };
+      setItems([...items, addAllData]);
       setInputData("");
       setMessage(1);
-      setTimeout(()=>{
-        setMessage(0)
-      }, 2000)
+      setTimeout(() => {
+        setMessage(0);
+      }, 2000);
     }
   };
 
   //   Delete items method
-  const deleteItems = (id) => {
-    //   console.log(id)
-    const updatedData = items.filter((elem, ind) => {
-      return ind !== id;
+  const deleteItems = (ind) => {
+    const updatedData = items.filter((elem) => {
+      return ind !== elem.id;
     });
     setItems(updatedData);
     setMessage(2);
-    setTimeout(()=>{
-      setMessage(0)
-    }, 2000)
+    setTimeout(() => {
+      setMessage(0);
+    }, 2000);
   };
 
   //   removeAll all method
   const removeAll = () => {
     setItems([]);
     setMessage(2);
-    setTimeout(()=>{
-      setMessage(0)
-    }, 2000)
+    setTimeout(() => {
+      setMessage(0);
+    }, 2000);
   };
 
+  // Edit items Method
+  const editItem = (id) => {
+    let editItemValue = items.find((elem) => {
+      return elem.id === id;
+    });
+    console.log(editItemValue);
+    setToggleItem(false);
+    setInputData(editItemValue.name);
+    setIsEditItem(id);
+  };
+
+  // Set local storage
+  useEffect(() => {
+    localStorage.setItem("list", JSON.stringify(items));
+  }, [items]);
   return (
     <div className="myMainDiv">
       <div className="message">
-        {message==1 ? (
+        {message === 1 ? (
           <Alert variant="success">Successfully Add todo!</Alert>
-        ) : message==2 ? (
+        ) : message === 2 ? (
           <Alert variant="danger">Deleted your todo!</Alert>
-        ) : console.log()
-      }
+        ) : message === 3 ? (
+          <Alert variant="warning">Todo Updated?!</Alert>
+        ) :  null}
       </div>
       <div className="main_TodoDiv py-5">
         <div className="childTodoDiv my-5">
@@ -75,21 +126,34 @@ function Todo() {
                 aria-describedby="basic-addon"
                 onChange={(e) => setInputData(e.target.value)}
               />
-              <Button onClick={addItems} variant="contained">
-                <AddIcon color="primary" />
-              </Button>
+              {toggleItem ? (
+                <Button title="Add item" onClick={addItems} variant="contained">
+                  <AddIcon color="primary" />
+                </Button>
+              ) : (
+                <Button onClick={addItems} variant="contained" title="Update data">
+                  <EditIcon className="text-success" />
+                </Button>
+              )}
             </InputGroup>
           </div>
 
           <div className="todoItem">
-            {items.map((val, ind) => {
+            {items.map((val) => {
               return (
-                <div key={ind} className="eachitem mb-2 text-capitalize">
-                  <span>{val}</span>
-                  <DeleteIcon
-                    id="deleteIcon"
-                    onClick={() => deleteItems(ind)}
-                  />
+                <div key={val.id} className="eachitem mb-2 text-capitalize">
+                  <span>{val.name}</span>
+                  <div>
+                    <span id="editIcon" title="Edit item">
+                      <EditIcon onClick={() => editItem(val.id)} />
+                    </span>
+                    <span title="Delete item">
+                      <DeleteIcon
+                        id="deleteIcon"
+                        onClick={() => deleteItems(val.id)}
+                      />
+                    </span>
+                  </div>
                 </div>
               );
             })}
@@ -97,6 +161,7 @@ function Todo() {
 
           <div className="clearAll my-3">
             <Button
+              title="Delete item"
               onClick={removeAll}
               className="fw-bold text-danger"
               variant="contained"
